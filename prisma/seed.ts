@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { PrismaClient, ReviewGenerationStatus } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -128,7 +128,7 @@ async function main() {
       organizationId: organization.id,
       jobId: job.id,
       paymentRequestId: paymentRequest.id,
-      status: ReviewGenerationStatus.READY,
+      status: "READY",
       sourceModel: "gpt-4.1-mini",
       promptVersion: "2026-03-30",
       confidence: 0.91,
