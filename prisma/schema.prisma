@@ -1,0 +1,270 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum MembershipRole {
+  OWNER
+}
+
+enum OnboardingStatus {
+  STARTED
+  STRIPE_PENDING
+  BUSINESS_DETAILS
+  REVIEW_DESTINATION
+  CRM_OPTIONAL
+  COMPLETE
+}
+
+enum ReviewDestinationType {
+  GOOGLE
+}
+
+enum PaymentRequestStatus {
+  DRAFT
+  SENT
+  CHECKOUT_CREATED
+  PAID
+  EXPIRED
+  FAILED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+}
+
+enum ReviewGenerationStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+enum IntegrationType {
+  GHL
+  JOBBER
+  HOUSECALL_PRO
+  MANUAL
+}
+
+enum IntegrationStatus {
+  DISCONNECTED
+  CONNECTED
+  ERROR
+}
+
+model User {
+  id             String       @id @default(cuid())
+  email          String       @unique
+  supabaseUserId String?      @unique
+  passwordHash   String
+  fullName       String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  memberships    Membership[]
+  ownedSessions  Session[]
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  token      String   @unique
+  expiresAt  DateTime
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model Organization {
+  id                        String                   @id @default(cuid())
+  slug                      String                   @unique
+  name                      String
+  businessName              String?
+  businessEmail             String?
+  businessPhone             String?
+  websiteUrl                String?
+  city                      String?
+  googleReviewUrl           String?
+  brandPrimaryColor         String?                  @default("#0F766E")
+  brandAccentColor          String?                  @default("#F59E0B")
+  logoUrl                   String?
+  emailCustomerOnCreate     Boolean                  @default(true)
+  emailMerchantOnCreate     Boolean                  @default(true)
+  emailMerchantOnPaid       Boolean                  @default(true)
+  onboardingStatus          OnboardingStatus         @default(STARTED)
+  onboardingCompletedAt     DateTime?
+  createdAt                 DateTime                 @default(now())
+  updatedAt                 DateTime                 @updatedAt
+  memberships               Membership[]
+  stripeAccount             StripeAccount?
+  reviewDestinations        ReviewDestination[]
+  customers                 Customer[]
+  jobs                      Job[]
+  paymentRequests           PaymentRequest[]
+  payments                  Payment[]
+  reviewGenerations         ReviewGeneration[]
+  webhookEvents             WebhookEvent[]
+  integrationConnections    IntegrationConnection[]
+}
+
+model Membership {
+  id              String          @id @default(cuid())
+  role            MembershipRole  @default(OWNER)
+  userId          String
+  organizationId  String
+  createdAt       DateTime        @default(now())
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+}
+
+model StripeAccount {
+  id                         String        @id @default(cuid())
+  organizationId             String        @unique
+  stripeAccountId            String        @unique
+  chargesEnabled             Boolean       @default(false)
+  payoutsEnabled             Boolean       @default(false)
+  detailsSubmitted           Boolean       @default(false)
+  onboardingUrl              String?
+  dashboardUrl               String?
+  defaultApplicationFeeBps   Int           @default(290)
+  createdAt                  DateTime      @default(now())
+  updatedAt                  DateTime      @updatedAt
+  organization               Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model ReviewDestination {
+  id              String                 @id @default(cuid())
+  organizationId  String
+  type            ReviewDestinationType  @default(GOOGLE)
+  label           String                 @default("Google Business Profile")
+  url             String
+  isDefault       Boolean                @default(true)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  organization    Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model Customer {
+  id              String          @id @default(cuid())
+  organizationId  String
+  name            String
+  email           String
+  phone           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  jobs            Job[]
+
+  @@unique([organizationId, email])
+}
+
+model Job {
+  id                    String             @id @default(cuid())
+  organizationId        String
+  customerId            String
+  serviceType           String
+  city                  String?
+  notes                 String?
+  amountCents           Int
+  status                PaymentRequestStatus @default(DRAFT)
+  completedAt           DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customer              Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  paymentRequests       PaymentRequest[]
+  payments              Payment[]
+  reviewGenerations     ReviewGeneration[]
+}
+
+model PaymentRequest {
+  id                    String                @id @default(cuid())
+  organizationId        String
+  jobId                 String
+  stripeCheckoutSessionId String?             @unique
+  stripePaymentLinkId   String?
+  shareableUrl          String?
+  hostedReviewToken     String                @unique
+  amountCents           Int
+  status                PaymentRequestStatus  @default(DRAFT)
+  customerEmailSentAt   DateTime?
+  merchantNotifiedAt    DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  organization          Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  job                   Job                   @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  payments              Payment[]
+}
+
+model Payment {
+  id                        String         @id @default(cuid())
+  organizationId            String
+  jobId                     String
+  paymentRequestId          String
+  stripeCheckoutSessionId   String?        @unique
+  stripePaymentIntentId     String?        @unique
+  stripeChargeId            String?        @unique
+  amountCents               Int
+  currency                  String         @default("usd")
+  status                    PaymentStatus  @default(PENDING)
+  paidAt                    DateTime?
+  rawStatus                 String?
+  createdAt                 DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
+  organization              Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  job                       Job            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  paymentRequest            PaymentRequest @relation(fields: [paymentRequestId], references: [id], onDelete: Cascade)
+}
+
+model ReviewGeneration {
+  id                    String                  @id @default(cuid())
+  organizationId        String
+  jobId                 String
+  paymentRequestId      String?
+  status                ReviewGenerationStatus @default(PENDING)
+  sourceModel           String?
+  promptVersion         String?
+  reviewDraft           String?
+  shortReview           String?
+  confidence            Float?
+  flags                 Json?
+  customerEditedReview  String?
+  copiedAt              DateTime?
+  postedAt              DateTime?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  organization          Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  job                   Job                     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model WebhookEvent {
+  id               String        @id @default(cuid())
+  organizationId   String?
+  stripeEventId    String        @unique
+  type             String
+  livemode         Boolean       @default(false)
+  processedAt      DateTime?
+  payload          Json
+  createdAt        DateTime      @default(now())
+  organization     Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+}
+
+model IntegrationConnection {
+  id               String             @id @default(cuid())
+  organizationId   String
+  type             IntegrationType
+  status           IntegrationStatus  @default(DISCONNECTED)
+  externalAccountId String?
+  metadata         Json?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  organization     Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}

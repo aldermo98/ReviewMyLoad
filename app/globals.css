@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fcfcf9;
+  --foreground: #101010;
+  --brand-primary: #111111;
+  --brand-accent: #1f8f67;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+::selection {
+  background: rgba(31, 143, 103, 0.18);
+}
