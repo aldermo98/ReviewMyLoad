@@ -8,7 +8,7 @@ import { finishOnboardingAction, saveBusinessDetailsAction } from "@/app/(app)/d
 
 const checklist = [
   { label: "Create account", key: "account" },
-  { label: "Connect Stripe", key: "stripe" },
+  { label: "Connect payments", key: "payments" },
   { label: "Add business details", key: "business" },
   { label: "Add Google review URL", key: "review" },
   { label: "CRM placeholder", key: "crm" },
@@ -16,7 +16,7 @@ const checklist = [
 
 export default async function OnboardingPage() {
   const { organization } = await requireOrganizationContext();
-  const stripeConnected = Boolean(organization.stripeAccount?.stripeAccountId);
+  const paymentAccountConnected = Boolean(organization.paymentProviderAccount?.providerAccountId);
 
   return (
     <div className="grid gap-8 xl:grid-cols-[0.9fr_1.1fr]">
@@ -28,8 +28,8 @@ export default async function OnboardingPage() {
             const complete =
               item.key === "account"
                 ? true
-                : item.key === "stripe"
-                  ? stripeConnected
+                : item.key === "payments"
+                  ? paymentAccountConnected
                   : item.key === "business"
                     ? Boolean(organization.businessEmail && organization.businessName)
                     : item.key === "review"
@@ -53,16 +53,16 @@ export default async function OnboardingPage() {
         </div>
 
         <div className="mt-8 rounded-[1.75rem] bg-slate-950 p-5 text-white">
-          <p className="text-sm font-medium text-slate-200">Stripe onboarding</p>
+          <p className="text-sm font-medium text-slate-200">Payments setup</p>
           <p className="mt-3 text-sm leading-6 text-slate-300">
-            Connect your Stripe account so every payment request can stay inside the free product model.
+            Connect payouts once so every payment request can stay inside the free product model.
           </p>
           <Link
-            href="/api/stripe/connect"
+            href="/api/payments/connect"
             className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-950"
           >
             <Link2 className="size-4" />
-            {stripeConnected ? "Refresh Stripe onboarding" : "Connect Stripe"}
+            {paymentAccountConnected ? "Refresh payments setup" : "Connect payments"}
           </Link>
         </div>
       </section>

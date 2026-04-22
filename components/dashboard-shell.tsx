@@ -1,11 +1,7 @@
-"use client";
-
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { CreditCard, Home, Settings, Sparkles } from "lucide-react";
 
 import { signOutAction } from "@/app/(auth)/actions";
-import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: Home },
@@ -21,8 +17,6 @@ export function DashboardShell({
   businessName: string;
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-
   return (
     <div className="min-h-screen bg-[#fcfcf9] text-neutral-950">
       <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
@@ -47,30 +41,21 @@ export function DashboardShell({
         <div className="mt-6 grid gap-10 lg:grid-cols-[220px_minmax(0,1fr)]">
           <aside className="border-r border-black/8 pr-6">
             <nav className="space-y-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                item.href === "/dashboard"
-                  ? pathname === item.href
-                  : pathname === item.href || pathname.startsWith(`${item.href}/`);
+              {navItems.map((item) => {
+                const Icon = item.icon;
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center gap-3 rounded-full px-3 py-2 text-sm font-medium transition",
-                    isActive
-                      ? "bg-neutral-950 text-white"
-                      : "text-neutral-500 hover:text-neutral-950",
-                  )}
-                >
-                  <Icon className="size-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-center gap-3 rounded-full px-3 py-2 text-sm font-medium text-neutral-500 transition hover:bg-black/4 hover:text-neutral-950"
+                  >
+                    <Icon className="size-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
           </aside>
 
           <div className="min-w-0">{children}</div>

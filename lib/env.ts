@@ -16,6 +16,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default("ReviewMyLoad <hello@example.com>"),
+  INTEGRATION_SECRET_KEY: z.string().optional(),
 });
 
 export function getEnv() {

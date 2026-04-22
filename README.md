@@ -5,7 +5,7 @@ ReviewMyLoad is a production-minded MVP for home service businesses that want to
 ## Product shape
 
 - Free for merchants when they use the platform payment flow
-- Stripe-hosted checkout plus Connect onboarding
+- Embedded checkout plus connected-account onboarding
 - Multi-tenant organizations from day one
 - Manual job entry first, with a clean CRM adapter seam for later
 - OpenAI Responses API for natural review draft generation
@@ -20,7 +20,7 @@ ReviewMyLoad is a production-minded MVP for home service businesses that want to
 - Tailwind CSS
 - Supabase Auth
 - Supabase Postgres
-- Stripe
+- Stripe as the first payment provider implementation
 - OpenAI
 - Resend
 - Prisma only remains as a temporary migration/seed tool, not as the app runtime data layer
@@ -60,8 +60,8 @@ See [supabase/README.md](/C:/Users/moren/OneDrive/Documents/Projects/ReviewMyLoa
 
 ## Stripe notes
 
-- `app/api/stripe/connect/route.ts` starts merchant onboarding.
-- `app/api/stripe/webhooks/route.ts` is the source of truth for payment success.
+- `app/api/payments/connect/route.ts` starts merchant payments onboarding.
+- `app/api/stripe/webhooks/route.ts` is the current Stripe-backed source of truth for payment success.
 - The dashboard also includes a local demo success action so you can verify the review generation flow before wiring live webhooks.
 - Checkout sessions use application fees plus destination transfers so the core business model stays payment-powered.
 
@@ -83,7 +83,7 @@ See [supabase/README.md](/C:/Users/moren/OneDrive/Documents/Projects/ReviewMyLoa
 - `app/` routes, layouts, server actions, and API endpoints
 - `components/` shared UI pieces
 - `lib/auth` Supabase-backed organization context
-- `lib/billing` Stripe account and checkout helpers
+- `lib/payments` payment provider abstraction plus the Stripe Connect implementation
 - `lib/reviews` OpenAI review generation service
 - `lib/email` transactional email wrappers and templates
 - `lib/data` Supabase-backed application data layer

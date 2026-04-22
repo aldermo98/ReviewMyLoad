@@ -16,10 +16,10 @@ import { generateReviewForPaymentRequest } from "@/lib/reviews/generate-review";
 import { sendEmail } from "@/lib/email/resend";
 import { paymentSucceededMerchantEmail } from "@/lib/email/templates";
 import { absoluteUrl, formatCurrency } from "@/lib/utils";
-import { getStripe } from "@/lib/billing/stripe";
+import { getStripePaymentProvider } from "@/lib/payments";
 
 export async function POST(request: Request) {
-  const stripe = getStripe();
+  const stripe = getStripePaymentProvider().getClient();
   const env = getEnv();
 
   if (!stripe || !env.STRIPE_WEBHOOK_SECRET) {

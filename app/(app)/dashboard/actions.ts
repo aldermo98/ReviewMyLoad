@@ -9,9 +9,11 @@ import {
   createJob,
   createPaymentRequest,
   getJobDetail,
+  getIntegrationConnectionForOrganization,
   getPaymentRequestByToken,
   getPaymentRequestContextById,
   replaceReviewDestination,
+  upsertIntegrationConnection,
   updateJob,
   updateOrganizationBusinessDetails,
   updatePaymentRequest,
@@ -26,7 +28,8 @@ import {
   paymentSucceededMerchantEmail,
 } from "@/lib/email/templates";
 import { requireOrganizationContext } from "@/lib/auth/session";
-import { createCheckoutForPaymentRequest } from "@/lib/billing/stripe";
+import { verifyGoHighLevelConnection } from "@/lib/crm/gohighlevel";
+import { createPaymentCheckoutSession } from "@/lib/payments";
 import { generateReviewForPaymentRequest } from "@/lib/reviews/generate-review";
 import { absoluteUrl, formatCurrency } from "@/lib/utils";
 
@@ -69,6 +72,66 @@ export async function saveSettingsAction(formData: FormData) {
 
   revalidatePath("/dashboard/settings");
   revalidatePath("/dashboard");
+}
+
+export async function connectGoHighLevelAction(formData: FormData) {
+  const { organization } = await requireOrganizationContext();
+  const locationId = String(formData.get("ghlLocationId") ?? "").trim();
+  const privateIntegrationToken = String(formData.get("ghlPrivateIntegrationToken") ?? "").trim();
+
+  if (!locationId || !privateIntegrationToken) {
+    redirect("/dashboard/settings?crm=missing");
+  }
+
+  const verified = await verifyGoHighLevelConnection({
+    locationId,
+    privateIntegrationToken,
+  });
+
+  await upsertIntegrationConnection({
+    organizationId: organization.id,
+    type: "GHL",
+    status: "CONNECTED",
+    externalAccountId: verified.locationId,
+    metadata: {
+      provider: "gohighlevel",
+      locationId: verified.locationId,
+      locationName: verified.locationName,
+      companyId: verified.companyId,
+      email: verified.email,
+      tokenLast4: verified.tokenLast4,
+      encryptedToken: verified.encryptedToken,
+      connectedAt: new Date().toISOString(),
+      authMode: "private_integration_token",
+      docsUrl: "https://marketplace.gohighlevel.com/docs/",
+    },
+  });
+
+  await updateOrganizationBusinessDetails(organization.id, {
+    onboardingStatus: organization.onboardingStatus === "STARTED" ? "CRM_OPTIONAL" : organization.onboardingStatus,
+  });
+
+  revalidatePath("/dashboard/settings");
+  revalidatePath("/dashboard/onboarding");
+  redirect("/dashboard/settings?crm=connected");
+}
+
+export async function disconnectGoHighLevelAction() {
+  const { organization } = await requireOrganizationContext();
+  const existing = await getIntegrationConnectionForOrganization(organization.id, "GHL");
+
+  if (existing) {
+    await upsertIntegrationConnection({
+      organizationId: organization.id,
+      type: "GHL",
+      status: "DISCONNECTED",
+      externalAccountId: null,
+      metadata: null,
+    });
+  }
+
+  revalidatePath("/dashboard/settings");
+  redirect("/dashboard/settings?crm=disconnected");
 }
 
 export async function finishOnboardingAction() {
@@ -129,7 +192,7 @@ export async function createPaymentRequestAction(formData: FormData) {
     throw new Error("Payment request could not be created.");
   }
 
-  const checkout = await createCheckoutForPaymentRequest(paymentRequest.id);
+  const checkout = await createPaymentCheckoutSession(paymentRequest.id);
   const formattedAmount = formatCurrency(amountCents);
 
   if (organization.emailCustomerOnCreate) {

@@ -35,26 +35,41 @@ export async function signUpAction(formData: FormData) {
     },
   });
 
-  if (authError) {
-    redirect("/sign-up?error=auth-signup-failed");
+  const supabase = await getSupabaseServerClient();
+
+  if (!authError && authData.user) {
+    await createAppUserWithOrganization({
+      email: values.email,
+      fullName: values.fullName,
+      businessName: values.businessName,
+      supabaseUserId: authData.user.id,
+      onboardingStatus: "STRIPE_PENDING",
+    });
   }
 
-  await createAppUserWithOrganization({
-    email: values.email,
-    fullName: values.fullName,
-    businessName: values.businessName,
-    supabaseUserId: authData.user?.id,
-    onboardingStatus: "STRIPE_PENDING",
-  });
-
-  const supabase = await getSupabaseServerClient();
   const { error: signInError } = await supabase.auth.signInWithPassword({
     email: values.email,
     password: values.password,
   });
 
   if (signInError) {
-    redirect("/sign-in?error=signin-required");
+    redirect("/sign-up?error=auth-signup-failed");
+  }
+
+  const { data: authUserData } = await supabase.auth.getUser();
+  const localUser = await findAppUserByIdentity({
+    email: values.email,
+    supabaseUserId: authUserData.user?.id,
+  });
+
+  if (!localUser) {
+    await createAppUserWithOrganization({
+      email: values.email,
+      fullName: values.fullName,
+      businessName: values.businessName,
+      supabaseUserId: authUserData.user?.id,
+      onboardingStatus: "STRIPE_PENDING",
+    });
   }
 
   redirect("/dashboard/onboarding");

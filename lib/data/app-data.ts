@@ -110,14 +110,20 @@ export async function createAppUserWithOrganization(input: {
     })),
   );
 
-  await one(
-    supabase.from("IntegrationConnection").insert(withTimestamps({
-      id: cuidLike("int_"),
-      organizationId,
-      type: "MANUAL",
-      status: "CONNECTED",
-    })),
-  );
+  // This placeholder connection is helpful for the dashboard, but sign-up
+  // should still succeed if an older database doesn't yet match this table.
+  try {
+    await one(
+      supabase.from("IntegrationConnection").insert(withTimestamps({
+        id: cuidLike("int_"),
+        organizationId,
+        type: "MANUAL",
+        status: "CONNECTED",
+      })),
+    );
+  } catch {
+    // Ignore optional CRM placeholder creation errors during onboarding.
+  }
 
   return { userId, organizationId };
 }
@@ -163,6 +169,14 @@ export async function getOrganizationContextByIdentity(input: {
     membership,
     organization: {
       ...organization,
+      paymentProvider: stripeAccount ? "stripe" : null,
+      paymentProviderAccount: stripeAccount
+        ? {
+            ...stripeAccount,
+            provider: "stripe",
+            providerAccountId: stripeAccount.stripeAccountId,
+          }
+        : null,
       stripeAccount,
       reviewDestinations,
       integrationConnections,
@@ -205,6 +219,63 @@ export async function getStripeAccountForOrganization(organizationId: string) {
 
   return one<Row>(
     supabase.from("StripeAccount").select("*").eq("organizationId", organizationId).maybeSingle(),
+  );
+}
+
+export async function getIntegrationConnectionForOrganization(
+  organizationId: string,
+  type: "GHL" | "JOBBER" | "HOUSECALL_PRO" | "MANUAL",
+) {
+  const supabase = getSupabaseAdminClient();
+
+  return one<Row>(
+    supabase
+      .from("IntegrationConnection")
+      .select("*")
+      .eq("organizationId", organizationId)
+      .eq("type", type)
+      .maybeSingle(),
+  );
+}
+
+export async function upsertIntegrationConnection(input: {
+  organizationId: string;
+  type: "GHL" | "JOBBER" | "HOUSECALL_PRO" | "MANUAL";
+  status: "DISCONNECTED" | "CONNECTED" | "ERROR";
+  externalAccountId?: string | null;
+  metadata?: Row | null;
+}) {
+  const supabase = getSupabaseAdminClient();
+  const existing = await getIntegrationConnectionForOrganization(input.organizationId, input.type);
+
+  if (existing) {
+    return one<Row>(
+      supabase
+        .from("IntegrationConnection")
+        .update(withUpdatedAt({
+          status: input.status,
+          externalAccountId: input.externalAccountId ?? null,
+          metadata: input.metadata ?? null,
+        }))
+        .eq("id", existing.id)
+        .select()
+        .single(),
+    );
+  }
+
+  return one<Row>(
+    supabase
+      .from("IntegrationConnection")
+      .insert(withTimestamps({
+        id: cuidLike("int_"),
+        organizationId: input.organizationId,
+        type: input.type,
+        status: input.status,
+        externalAccountId: input.externalAccountId ?? null,
+        metadata: input.metadata ?? null,
+      }))
+      .select()
+      .single(),
   );
 }
 
@@ -329,6 +400,14 @@ export async function getPaymentRequestContextById(paymentRequestId: string) {
     ...paymentRequest,
     organization: {
       ...organization,
+      paymentProvider: stripeAccount ? "stripe" : null,
+      paymentProviderAccount: stripeAccount
+        ? {
+            ...stripeAccount,
+            provider: "stripe",
+            providerAccountId: stripeAccount.stripeAccountId,
+          }
+        : null,
       stripeAccount,
     },
     job: {

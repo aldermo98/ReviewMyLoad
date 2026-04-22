@@ -3,12 +3,12 @@ import { ArrowRight } from "lucide-react";
 
 const steps = [
   {
-    title: "Connect Stripe once",
-    body: "Set up your merchant account and keep the core product free by using the built-in payment flow.",
+    title: "Connect payments once",
+    body: "Set up payouts once and keep the core product free by using the built-in payment flow.",
   },
   {
     title: "Send a payment link",
-    body: "Create a job in under a minute, email the customer automatically, and share the Stripe Checkout link anywhere.",
+    body: "Create a job in under a minute, email the customer automatically, and share the checkout link anywhere.",
   },
   {
     title: "Turn payment into a review request",
@@ -26,7 +26,7 @@ const benefits = [
 const faqs = [
   {
     q: "How is the core product free?",
-    a: "Merchants use the platform for free when they process payments through the built-in Stripe flow. The platform earns through payments instead of charging a core monthly subscription.",
+    a: "Merchants use the platform for free when they process payments through the built-in payment flow. The platform earns through payments instead of charging a core monthly subscription.",
   },
   {
     q: "Do you post reviews automatically?",
@@ -91,13 +91,13 @@ export default function HomePage() {
               <div>
                 <p className="text-sm font-semibold text-neutral-950">1. Send payment</p>
                 <p className="mt-2 text-sm leading-7 text-neutral-600">
-                  Create a job and send a Stripe Checkout link.
+                  Create a job and send a checkout link.
                 </p>
               </div>
               <div>
                 <p className="text-sm font-semibold text-neutral-950">2. Payment succeeds</p>
                 <p className="mt-2 text-sm leading-7 text-neutral-600">
-                  Stripe confirms payment and the job is marked complete.
+                  The payment confirms and the job is marked complete.
                 </p>
               </div>
               <div>

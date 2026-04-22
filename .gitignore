@@ -8,3 +8,5 @@ prisma/dev.db
 prisma/dev.db-journal
 .next-build
 .next-build-2
+
+.vercel
